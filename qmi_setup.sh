@@ -24,15 +24,15 @@
 
 # your wwan device name created by qmi_wwan kernel module
 # check it with "ip a" or "ifconfig -a". it may be wwan0?
-WWAN_DEV=wwp0s29u1u4
+WWAN_DEV=wwan0
 # your cdc_wdm modem location
 CDC_WDM=/dev/cdc-wdm0
 # this script uses following qmi commands
 QMICLI=/usr/bin/qmicli
 QMI_NETWORK=/usr/bin/qmi-network
 # the places of following commands vary depending on your distribution
-IFCONFIG=/bin/ifconfig
-DHCPCD=/sbin/dhcpcd
+IPCMD=/usr/bin/ip
+DHCP=/sbin/udhcpc
 SUDO=/usr/bin/sudo
 
 function helpmsg {
@@ -41,20 +41,20 @@ function helpmsg {
 }
 
 function qmi_start {
-    $COMMAND_PREFIX $IFCONFIG $WWAN_DEV up
+    $COMMAND_PREFIX $IPCMD link set $WWAN_DEV up
     $COMMAND_PREFIX $QMICLI -d $CDC_WDM --dms-set-operating-mode=online
     if [ $? -ne 0 ]; then
 	echo "your wwan device may be RFKilled?"
 	exit 1
     fi
     $COMMAND_PREFIX $QMI_NETWORK $CDC_WDM start
-    $COMMAND_PREFIX $DHCPCD $WWAN_DEV
+    $COMMAND_PREFIX $DHCP -i $WWAN_DEV
 }
 
 function qmi_stop {
     $COMMAND_PREFIX $QMI_NETWORK $CDC_WDM stop
-    $COMMAND_PREFIX kill `cat /var/run/dhcpcd-${WWAN_DEV}.pid`
-    $COMMAND_PREFIX $IFCONFIG $WWAN_DEV down
+    $COMMAND_PREFIX pkill udhcpc
+    $COMMAND_PREFIX $IPCMD link set $WWAN_DEV down
 }
 
 function qmi_strength {
